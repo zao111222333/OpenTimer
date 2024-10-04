@@ -100,11 +100,29 @@ struct Timing {
   std::optional<TimingSense> sense;         
   std::optional<TimingType> type;           
   std::optional<Lut> cell_rise;             
+  std::optional<Lut> ocv_mean_shift_cell_rise;             
+  std::optional<Lut> ocv_std_dev_cell_rise;             
+  std::optional<Lut> ocv_skewness_shift_cell_rise;             
   std::optional<Lut> cell_fall;             
+  std::optional<Lut> ocv_mean_shift_cell_fall;             
+  std::optional<Lut> ocv_std_dev_cell_fall;             
+  std::optional<Lut> ocv_skewness_shift_cell_fall;             
   std::optional<Lut> rise_transition;       
+  std::optional<Lut> ocv_mean_shift_rise_transition;             
+  std::optional<Lut> ocv_std_dev_rise_transition;             
+  std::optional<Lut> ocv_skewness_shift_rise_transition;             
   std::optional<Lut> fall_transition;       
+  std::optional<Lut> ocv_mean_shift_fall_transition;             
+  std::optional<Lut> ocv_std_dev_fall_transition;             
+  std::optional<Lut> ocv_skewness_shift_fall_transition;             
   std::optional<Lut> rise_constraint;       
+  std::optional<Lut> ocv_mean_shift_rise_constraint;             
+  std::optional<Lut> ocv_std_dev_rise_constraint;             
+  std::optional<Lut> ocv_skewness_shift_rise_constraint;             
   std::optional<Lut> fall_constraint;       
+  std::optional<Lut> ocv_mean_shift_fall_constraint;             
+  std::optional<Lut> ocv_std_dev_fall_constraint;             
+  std::optional<Lut> ocv_skewness_shift_fall_constraint;             
 
   InternalPower internal_power;
 
