@@ -480,7 +480,7 @@ Timing Celllib::_extract_timing(token_iterator& itr, const token_iterator end) {
     } 
     else if (*itr == "ocv_mean_shift_fall_transition") {                  // Rise delay.
       timing.ocv_mean_shift_fall_transition = _extract_lut(itr, end);
-    }
+    }  
     else if (*itr == "ocv_std_dev_fall_transition") {                  // Rise delay.
       timing.ocv_std_dev_fall_transition = _extract_lut(itr, end);
     }
