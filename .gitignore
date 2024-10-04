@@ -25,3 +25,15 @@
 *.exe
 *.out
 *.app
+
+bin
+build
+.vscode
+example/incremental/incremental
+example/optimizer/optimizer
+example/simple/simple
+example/sizer/sizer
+example/unit/unit
+unittest/utility
+unittest/path
+ot/config.hpp
