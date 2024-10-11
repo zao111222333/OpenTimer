@@ -45,10 +45,10 @@ class Arc {
     const Pin& to() const;
 
   private:
-
     Pin& _from;
-    Pin& _to; 
-
+    Pin& _to;
+    // TODO: Should be init
+    ot::OCVType _ocv_type;
     size_t _idx;
 
     int _state {0};
@@ -59,7 +59,7 @@ class Arc {
     std::optional<std::list<Arc*>::iterator> _fanout_satellite;
     std::optional<std::list<Arc*>::iterator> _fanin_satellite;
     
-    TimingData<std::optional<float>, MAX_SPLIT, MAX_TRAN, MAX_TRAN> _delay;
+    TimingData<std::optional<ot::OCVTiming>, MAX_SPLIT, MAX_TRAN, MAX_TRAN> _delay;
     TimingData<std::optional<float>, MAX_SPLIT, MAX_TRAN, MAX_TRAN> _ipower;
 
     void _remap_timing(Split, const Timing&);

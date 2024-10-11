@@ -3,6 +3,7 @@
 
 #include <ot/liberty/lut.hpp>
 #include <ot/liberty/power.hpp>
+#include <variant> 
 
 namespace ot {
 
@@ -92,6 +93,32 @@ inline const std::unordered_map<std::string_view, TimingType> timing_types = {
 std::string to_string(TimingSense);
 std::string to_string(TimingType);
 
+struct OCVLVF {
+  float mean;
+  float std_dev;
+  float skewnewss;
+};
+struct OCVLVF2 {
+  float alpha;
+  float mean1;
+  float std_dev1;
+  float skewnewss1;
+  float mean2;
+  float std_dev2;
+  float skewnewss2;
+};
+
+enum OCVType {
+  NOMINAL = 0,
+  LVF = 1,
+  LVF2 = 2,
+};
+
+using OCVTiming = std::variant<float, OCVLVF, OCVLVF2>;
+
+OCVTiming sum_timing(OCVTiming, OCVTiming);
+OCVTiming max_timing(OCVTiming, OCVTiming);
+
 // Struct: Timing
 struct Timing {
   
@@ -141,9 +168,9 @@ struct Timing {
   void scale_time(float);
   void scale_capacitance(float);
 
-  std::optional<float> delay(Tran, Tran, float, float) const;
-  std::optional<float> slew(Tran, Tran, float, float) const;
-  std::optional<float> constraint(Tran, Tran, float, float) const;
+  std::optional<OCVTiming> delay(Tran, Tran, float, float, OCVType) const;
+  std::optional<OCVTiming> slew(Tran, Tran, float, float, OCVType) const;
+  std::optional<OCVTiming> constraint(Tran, Tran, float, float, OCVType) const;
 };
 
 std::ostream& operator << (std::ostream&, const Timing&);

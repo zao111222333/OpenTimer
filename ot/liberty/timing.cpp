@@ -412,36 +412,62 @@ void Timing::scale_capacitance(float s) {
 // Query the delay which is referenced by the output transition status, input slew, and driving 
 // load. The output transition status indicates the type of lut that should be used during the
 // linear interpolation or linear extrapolation.
-std::optional<float> Timing::delay(Tran irf, Tran orf, float slew, float load) const {
+std::optional<OCVTiming> Timing::delay(Tran irf, Tran orf, float slew, float load, OCVType ocv_type) const {
 
   if(!is_transition_defined(irf, orf)) {
     return std::nullopt;
   }
   
-  const Lut* lut {nullptr};
+  const Lut* lut1 {nullptr};
+  const Lut* lut2 {nullptr};
+  const Lut* lut3 {nullptr};
+  const Lut* lut4 {nullptr};
 
   switch(orf) {
     case RISE:
-      lut = cell_rise ? &(cell_rise.value()) : nullptr;
+      // mean = nominal + mean_shift
+      lut1 = cell_rise ? &(cell_rise.value()) : nullptr;
+      lut2 = ocv_mean_shift_cell_rise ? &(ocv_mean_shift_cell_rise.value()) : nullptr;
+      lut3 = ocv_std_dev_cell_rise ? &(ocv_std_dev_cell_rise.value()) : nullptr;
+      lut4 = ocv_skewness_shift_cell_rise ? &(ocv_skewness_shift_cell_rise.value()) : nullptr;
     break;
 
     case FALL:
-      lut = cell_fall ? &(cell_fall.value()) : nullptr;
+      // mean = nominal + mean_shift
+      lut1 = cell_fall ? &(cell_fall.value()) : nullptr;
+      lut2 = ocv_mean_shift_cell_fall ? &(ocv_mean_shift_cell_fall.value()) : nullptr;
+      lut3 = ocv_std_dev_cell_fall ? &(ocv_std_dev_cell_fall.value()) : nullptr;
+      lut4 = ocv_skewness_shift_cell_fall ? &(ocv_skewness_shift_cell_fall.value()) : nullptr;
     break;
 
     default:
       assert(false);
     break;
   };
-  
-  if(lut == nullptr) {
-    return std::nullopt;
+  switch(ocv_type) {
+    case NOMINAL:
+      if(lut1 == nullptr) {
+        return std::nullopt;
+      }
+    break;
+    case LVF:
+      if(lut1 == nullptr || lut2 == nullptr || lut3 == nullptr || lut4 == nullptr) {
+        return std::nullopt;
+      }
+    break;
+    case LVF2:
+      // TODO
+      if(lut1 == nullptr) {
+        return std::nullopt;
+      }
+    break;
   }
   
+  
   // Case 1: scalar.
-  if(lut->lut_template == nullptr) {     
-    if(lut->is_scalar()) {
-      return lut->table[0];
+  if(lut1->lut_template == nullptr) {
+    if(lut1->is_scalar()) {
+      return lut1->table[0];
     }
     else {
       OT_LOGF("lut without template must contain a single scalar");
@@ -452,21 +478,21 @@ std::optional<float> Timing::delay(Tran irf, Tran orf, float slew, float load) c
   float val1 {.0f}, val2 {.0f};
   
   // - obtain the input numerics
-  assert(lut->lut_template->variable1);
+  assert(lut1->lut_template->variable1);
 
-  switch(*(lut->lut_template->variable1)) {
+  switch(*(lut1->lut_template->variable1)) {
 
     case LutVar::TOTAL_OUTPUT_NET_CAPACITANCE:
-      if(lut->lut_template->variable2) {
-        assert(lut->lut_template->variable2 == LutVar::INPUT_NET_TRANSITION);
+      if(lut1->lut_template->variable2) {
+        assert(lut1->lut_template->variable2 == LutVar::INPUT_NET_TRANSITION);
       }
       val1 = load;
       val2 = slew;
     break;
 
     case LutVar::INPUT_NET_TRANSITION:
-      if(lut->lut_template->variable2) {
-        assert(lut->lut_template->variable2 == LutVar::TOTAL_OUTPUT_NET_CAPACITANCE);
+      if(lut1->lut_template->variable2) {
+        assert(lut1->lut_template->variable2 == LutVar::TOTAL_OUTPUT_NET_CAPACITANCE);
       }
       val1 = slew;
       val2 = load;
@@ -478,15 +504,33 @@ std::optional<float> Timing::delay(Tran irf, Tran orf, float slew, float load) c
   };
   
   // - perform the linear inter/extro-polation on indices1 and indices2
-  return (*lut)(val1, val2); 
+  switch(ocv_type) {
+    case NOMINAL:
+      return (*lut1)(val1, val2);
+    break;
+    case LVF:
+      struct OCVLVF lvf = {
+        (*lut1)(val1, val2)+(*lut2)(val1, val2),
+        (*lut3)(val1, val2),
+        (*lut4)(val1, val2)
+      };
+      return lvf;
+    break;
+    case LVF2:
+      // TODO
+      float zero = 0.0;
+      return zero;
+    break;
+  }
+  
 }
 
 // Function: slew
 // Query the slew which is referenced by the output transition status, input slew, and driving 
 // load. The output transition status indicates the type of lut that should be used during the
 // linear interpolation or linear extrapolation.
-std::optional<float> Timing::slew(Tran irf, Tran orf, float slew, float load) const {
-  
+std::optional<OCVTiming> Timing::slew(Tran irf, Tran orf, float slew, float load, OCVType ocv_type) const {
+
   if(!is_transition_defined(irf, orf)) {
     return std::nullopt;
   }
@@ -560,11 +604,12 @@ std::optional<float> Timing::slew(Tran irf, Tran orf, float slew, float load) co
 // Query the constraint which is referenced by the output transition status, input slew, and
 // output slew. The output transition status indicates the type of lut that should be used 
 // during the linear interpolation or linear extrapolation.
-std::optional<float> Timing::constraint(
+std::optional<OCVTiming> Timing::constraint(
   Tran irf, 
   Tran orf, 
   float related_slew, 
-  float constrained_slew
+  float constrained_slew, 
+  OCVType ocv_type
 ) const {
   
   if(!is_transition_defined(irf, orf)) {
