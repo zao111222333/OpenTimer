@@ -535,16 +535,27 @@ std::optional<OCVTiming> Timing::slew(Tran irf, Tran orf, float slew, float load
     return std::nullopt;
   }
   
-  const Lut* lut {nullptr};
+  const Lut* lut1 {nullptr};
+  const Lut* lut2 {nullptr};
+  const Lut* lut3 {nullptr};
+  const Lut* lut4 {nullptr};
 
   switch(orf) {
 
     case RISE:
-      lut = rise_transition ? &(rise_transition.value()) : nullptr;
+      // mean = nominal + mean_shift
+      lut1 = rise_transition ? &(rise_transition.value()) : nullptr;
+      lut2 = ocv_mean_shift_rise_transition ? &(ocv_mean_shift_rise_transition.value()) : nullptr;
+      lut3 = ocv_std_dev_rise_transition ? &(ocv_std_dev_rise_transition.value()) : nullptr;
+      lut4 = ocv_skewness_shift_rise_transition ? &(ocv_skewness_shift_rise_transition.value()) : nullptr;
     break;
 
     case FALL:
-      lut = fall_transition ? &(fall_transition.value()) : nullptr;
+      // mean = nominal + mean_shift
+      lut1 = fall_transition ? &(fall_transition.value()) : nullptr;
+      lut2 = ocv_mean_shift_fall_transition ? &(ocv_mean_shift_fall_transition.value()) : nullptr;
+      lut3 = ocv_std_dev_fall_transition ? &(ocv_std_dev_fall_transition.value()) : nullptr;
+      lut4 = ocv_skewness_shift_fall_transition ? &(ocv_skewness_shift_fall_transition.value()) : nullptr;
     break;
 
     default:
@@ -552,15 +563,30 @@ std::optional<OCVTiming> Timing::slew(Tran irf, Tran orf, float slew, float load
     break;
   };
   
-  // No slew lut
-  if(lut == nullptr) {
-    return std::nullopt;
+  switch(ocv_type) {
+    case NOMINAL:
+      if(lut1 == nullptr) {
+        return std::nullopt;
+      }
+    break;
+    case LVF:
+      if(lut1 == nullptr || lut2 == nullptr || lut3 == nullptr || lut4 == nullptr) {
+        return std::nullopt;
+      }
+    break;
+    case LVF2:
+      // TODO
+      if(lut1 == nullptr) {
+        return std::nullopt;
+      }
+    break;
   }
   
+  
   // Case 1: scalar.
-  if(lut->lut_template == nullptr) {     
-    if(lut->is_scalar()) {
-      return lut->table[0];
+  if(lut1->lut_template == nullptr) {     
+    if(lut1->is_scalar()) {
+      return lut1->table[0];
     }
     else {
       OT_LOGF("lut without template must contain a single scalar");
@@ -571,21 +597,21 @@ std::optional<OCVTiming> Timing::slew(Tran irf, Tran orf, float slew, float load
   float val1 {0.0f}, val2 {0.0f};
   
   // - obtain the input numerics
-  assert(lut->lut_template->variable1);
+  assert(lut1->lut_template->variable1);
 
-  switch(*(lut->lut_template->variable1)) {
+  switch(*(lut1->lut_template->variable1)) {
 
     case LutVar::TOTAL_OUTPUT_NET_CAPACITANCE:
-      if(lut->lut_template->variable2) {
-        assert(*(lut->lut_template->variable2) == LutVar::INPUT_NET_TRANSITION);
+      if(lut1->lut_template->variable2) {
+        assert(*(lut1->lut_template->variable2) == LutVar::INPUT_NET_TRANSITION);
       }
       val1 = load;
       val2 = slew;
     break;
 
     case LutVar::INPUT_NET_TRANSITION:
-      if(lut->lut_template->variable2) {
-        assert(*(lut->lut_template->variable2) == LutVar::TOTAL_OUTPUT_NET_CAPACITANCE);
+      if(lut1->lut_template->variable2) {
+        assert(*(lut1->lut_template->variable2) == LutVar::TOTAL_OUTPUT_NET_CAPACITANCE);
       }
       val1 = slew;
       val2 = load;
@@ -597,7 +623,25 @@ std::optional<OCVTiming> Timing::slew(Tran irf, Tran orf, float slew, float load
   }
   
   // - perform the linear inter/extro-polation on indices1 and indices2
-  return (*lut)(val1, val2); 
+    // - perform the linear inter/extro-polation on indices1 and indices2
+  switch(ocv_type) {
+    case NOMINAL:
+      return (*lut1)(val1, val2);
+    break;
+    case LVF:
+      struct OCVLVF lvf = {
+        (*lut1)(val1, val2)+(*lut2)(val1, val2),
+        (*lut3)(val1, val2),
+        (*lut4)(val1, val2)
+      };
+      return lvf;
+    break;
+    case LVF2:
+      // TODO
+      float zero = 0.0;
+      return zero;
+    break;
+  } 
 }
 
 // Function: constraint
@@ -616,16 +660,25 @@ std::optional<OCVTiming> Timing::constraint(
     return std::nullopt;
   }
   
-  const Lut* lut {nullptr};
+  const Lut* lut1 {nullptr};
+  const Lut* lut2 {nullptr};
+  const Lut* lut3 {nullptr};
+  const Lut* lut4 {nullptr};
 
   switch(orf) {
 
     case RISE:
-      lut = rise_constraint ? &(rise_constraint.value()) : nullptr;
+      lut1 = rise_constraint ? &(rise_constraint.value()) : nullptr;
+      lut2 = ocv_mean_shift_rise_constraint ? &(ocv_mean_shift_rise_constraint.value()) : nullptr;
+      lut3 = ocv_std_dev_rise_constraint ? &(ocv_std_dev_rise_constraint.value()) : nullptr;
+      lut4 = ocv_skewness_shift_rise_constraint ? &(ocv_skewness_shift_rise_constraint.value()) : nullptr;
     break;
 
     case FALL:
-      lut = fall_constraint ? &(fall_constraint.value()) : nullptr;
+      lut1 = fall_constraint ? &(fall_constraint.value()) : nullptr;
+      lut2 = ocv_mean_shift_fall_constraint ? &(ocv_mean_shift_fall_constraint.value()) : nullptr;
+      lut3 = ocv_std_dev_fall_constraint ? &(ocv_std_dev_fall_constraint.value()) : nullptr;
+      lut4 = ocv_skewness_shift_fall_constraint ? &(ocv_skewness_shift_fall_constraint.value()) : nullptr;
     break;
 
     default:
@@ -633,14 +686,29 @@ std::optional<OCVTiming> Timing::constraint(
     break;
   };
   
-  if(lut == nullptr) {
-    return std::nullopt;
+  switch(ocv_type) {
+    case NOMINAL:
+      if(lut1 == nullptr) {
+        return std::nullopt;
+      }
+    break;
+    case LVF:
+      if(lut1 == nullptr || lut2 == nullptr || lut3 == nullptr || lut4 == nullptr) {
+        return std::nullopt;
+      }
+    break;
+    case LVF2:
+      // TODO
+      if(lut1 == nullptr) {
+        return std::nullopt;
+      }
+    break;
   }
   
   // Case 1: scalar.
-  if(lut->lut_template == nullptr) {     
-    if(lut->is_scalar()) {
-      return lut->table[0];
+  if(lut1->lut_template == nullptr) {     
+    if(lut1->is_scalar()) {
+      return lut1->table[0];
     }
     else {
       OT_LOGF("lut without template must contain a single scalar");
@@ -651,21 +719,21 @@ std::optional<OCVTiming> Timing::constraint(
   float val1 {0.0f}, val2 {0.0f};
   
   // - obtain the input numerics
-  assert(lut->lut_template->variable1);
+  assert(lut1->lut_template->variable1);
 
-  switch(*(lut->lut_template->variable1)) {
+  switch(*(lut1->lut_template->variable1)) {
 
     case LutVar::CONSTRAINED_PIN_TRANSITION:
-      if(lut->lut_template->variable2) {
-        assert(lut->lut_template->variable2 == LutVar::RELATED_PIN_TRANSITION);
+      if(lut1->lut_template->variable2) {
+        assert(lut1->lut_template->variable2 == LutVar::RELATED_PIN_TRANSITION);
       }
       val1 = constrained_slew;
       val2 = related_slew;
     break;
 
     case LutVar::RELATED_PIN_TRANSITION:
-      if(lut->lut_template->variable2) {
-        assert(lut->lut_template->variable2 == LutVar::CONSTRAINED_PIN_TRANSITION);
+      if(lut1->lut_template->variable2) {
+        assert(lut1->lut_template->variable2 == LutVar::CONSTRAINED_PIN_TRANSITION);
       }
       val1 = related_slew;
       val2 = constrained_slew;
@@ -677,7 +745,24 @@ std::optional<OCVTiming> Timing::constraint(
   };
   
   // - perform the linear inter/extro-polation on indices1 and indices2
-  return (*lut)(val1, val2); 
+  switch(ocv_type) {
+    case NOMINAL:
+      return (*lut1)(val1, val2);
+    break;
+    case LVF:
+      struct OCVLVF lvf = {
+        (*lut1)(val1, val2)+(*lut2)(val1, val2),
+        (*lut3)(val1, val2),
+        (*lut4)(val1, val2)
+      };
+      return lvf;
+    break;
+    case LVF2:
+      // TODO
+      float zero = 0.0;
+      return zero;
+    break;
+  } 
 }
 
 // operator
