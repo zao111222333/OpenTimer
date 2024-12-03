@@ -350,19 +350,19 @@ float Pin::cap(Split el, Tran rf) const {
 
 // Procedure: _relax_slew
 // Update the slew of the node
-void Pin::_relax_slew(Arc* arc, Split fel, Tran frf, Split tel, Tran trf, float val) {
+void Pin::_relax_slew(Arc* arc, Split fel, Tran frf, Split tel, Tran trf, OCVTiming val) {
 
   switch(tel) {
 
     case MIN:
-      if(!_slew[tel][trf] || val < *_slew[tel][trf]) {
-        _slew[tel][trf].emplace(arc, fel, frf, val);
+      if(!_slew[tel][trf]) {
+        _slew[tel][trf].emplace(arc, fel, frf, min_timing(val,*_slew[tel][trf]));
       }
     break;
 
     case MAX:
-      if(!_slew[tel][trf] || val > *_slew[tel][trf]) {
-        _slew[tel][trf].emplace(arc, fel, frf, val);
+      if(!_slew[tel][trf]) {
+        _slew[tel][trf].emplace(arc, fel, frf, max_timing(val,*_slew[tel][trf]));
       }
     break;
   };
@@ -370,17 +370,17 @@ void Pin::_relax_slew(Arc* arc, Split fel, Tran frf, Split tel, Tran trf, float 
 
 // Procedure: _relax_at
 // Update the arrival time of the node from a given fanin node.
-void Pin::_relax_at(Arc* arc, Split fel, Tran frf, Split tel, Tran trf, float val) {
+void Pin::_relax_at(Arc* arc, Split fel, Tran frf, Split tel, Tran trf, OCVTiming val) {
   
   switch (tel) {
     case MIN:
-      if(!_at[tel][trf] || val < *_at[tel][trf]) {
-        _at[tel][trf].emplace(arc, fel, frf, val);
+      if(!_at[tel][trf]) {
+        _at[tel][trf].emplace(arc, fel, frf, min_timing(val,*_at[tel][trf]));
       }
     break;
     case MAX:
-      if(!_at[tel][trf] || val > *_at[tel][trf]) {
-        _at[tel][trf].emplace(arc, fel, frf, val);
+      if(!_at[tel][trf]) {
+        _at[tel][trf].emplace(arc, fel, frf, max_timing(val,*_at[tel][trf]));
       }
     break;
   }
@@ -388,19 +388,19 @@ void Pin::_relax_at(Arc* arc, Split fel, Tran frf, Split tel, Tran trf, float va
 
 // Procedure: _relax_rat
 // Update the arrival time of the node
-void Pin::_relax_rat(Arc* arc, Split fel, Tran frf, Split tel, Tran trf, float val) {
+void Pin::_relax_rat(Arc* arc, Split fel, Tran frf, Split tel, Tran trf, OCVTiming val) {
 
   switch(fel) {
 
     case MIN:
-      if(!_rat[fel][frf] || val > *_rat[fel][frf]) {
-        _rat[fel][frf].emplace(arc, tel, trf, val);
+      if(!_rat[fel][frf]) {
+        _rat[fel][frf].emplace(arc, tel, trf, max_timing(val,*_rat[fel][frf]));
       }
     break;
 
     case MAX:
-      if(!_rat[fel][frf] || val < *_rat[fel][frf]) {
-        _rat[fel][frf].emplace(arc, tel, trf, val);
+      if(!_rat[fel][frf]) {
+        _rat[fel][frf].emplace(arc, tel, trf, min_timing(val,*_rat[fel][frf]));
       }
     break;
   };

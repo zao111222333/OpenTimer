@@ -148,7 +148,7 @@ void Arc::_fprop_at() {
   }
 
   FOR_EACH_EL_RF_RF_IF(el, frf, trf, _from._at[el][frf] && _delay[el][frf][trf]) {
-    _to._relax_at(this, el, frf, el, trf, *_delay[el][frf][trf] + *_from._at[el][frf]);
+    _to._relax_at(this, el, frf, el, trf, sum_timing(*_delay[el][frf][trf], *_from._at[el][frf]));
   }
 }
 

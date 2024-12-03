@@ -74,9 +74,9 @@ class Pin {
     Arc*  pi_arc {nullptr}; 
     Split pi_el;
     Tran  pi_rf;
-    float numeric;
-    At(Arc*, Split, Tran, float);
-    inline operator float () const;
+    OCVTiming numeric;
+    At(Arc*, Split, Tran, OCVTiming);
+    inline operator OCVTiming () const;
     inline auto pi() const;
   };
   
@@ -85,9 +85,9 @@ class Pin {
     Arc*  pi_arc {nullptr};
     Split pi_el;
     Tran  pi_rf;
-    float numeric;
-    Slew(Arc*, Split, Tran, float);
-    inline operator float () const;
+    OCVTiming numeric;
+    Slew(Arc*, Split, Tran, OCVTiming);
+    inline operator OCVTiming () const;
     inline auto pi() const;
   };
 
@@ -96,9 +96,9 @@ class Pin {
     Arc*  pi_arc {nullptr};
     Split pi_el;
     Tran  pi_rf;
-    float numeric;
-    Rat(Arc*, Split, Tran, float);
-    inline operator float () const;
+    OCVTiming numeric;
+    Rat(Arc*, Split, Tran, OCVTiming);
+    inline operator OCVTiming () const;
     inline auto pi() const;
   };
 
@@ -190,9 +190,9 @@ class Pin {
     void _reset_slew();
     void _reset_at();
     void _reset_rat();
-    void _relax_slew(Arc*, Split, Tran, Split, Tran, float);
-    void _relax_at(Arc*, Split, Tran, Split, Tran, float);
-    void _relax_rat(Arc*, Split, Tran, Split, Tran, float);
+    void _relax_slew(Arc*, Split, Tran, Split, Tran, OCVTiming);
+    void _relax_at(Arc*, Split, Tran, Split, Tran, OCVTiming);
+    void _relax_rat(Arc*, Split, Tran, Split, Tran, OCVTiming);
     void _insert_state(int);
     void _remove_state(int = 0);
     
@@ -210,7 +210,7 @@ class Pin {
 // ------------------------------------------------------------------------------------------------
 
 // Operator
-inline Pin::At::operator float () const { 
+inline Pin::At::operator OCVTiming () const { 
   return numeric; 
 }
 
@@ -222,7 +222,7 @@ inline auto Pin::At::pi() const {
 // ------------------------------------------------------------------------------------------------
 
 // Operator
-inline Pin::Slew::operator float () const { 
+inline Pin::Slew::operator OCVTiming () const { 
   return numeric; 
 }
 
@@ -234,7 +234,7 @@ inline auto Pin::Slew::pi() const {
 // ------------------------------------------------------------------------------------------------
 
 // Operator
-inline Pin::Rat::operator float () const { 
+inline Pin::Rat::operator OCVTiming () const { 
   return numeric; 
 }
 

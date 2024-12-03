@@ -118,6 +118,7 @@ using OCVTiming = std::variant<float, OCVLVF, OCVLVF2>;
 
 OCVTiming sum_timing(OCVTiming, OCVTiming);
 OCVTiming max_timing(OCVTiming, OCVTiming);
+OCVTiming min_timing(OCVTiming, OCVTiming);
 
 // Struct: Timing
 struct Timing {
