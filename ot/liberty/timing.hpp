@@ -94,18 +94,27 @@ std::string to_string(TimingSense);
 std::string to_string(TimingType);
 
 struct OCVLVF {
-  float mean;
-  float std_dev;
-  float skewnewss;
+  // moment1: mean
+  float m1;
+  // moment2: std_dev^2
+  float m2;
+  // moment3: skewness^3
+  float m3;
+  // print
+  friend std::ostream& operator<<(std::ostream& os, const OCVLVF& obj) {
+    os << "OCVLVF(m1: " << obj.m1
+       << ", m2: " << obj.m2
+       << ", m3: " << obj.m3 << ")";
+    return os;
+  }
+  OCVLVF sub(const OCVLVF& other);
+  OCVLVF sum(const OCVLVF& other);
+  OCVLVF max(const OCVLVF& other, float rho);
 };
 struct OCVLVF2 {
   float alpha;
-  float mean1;
-  float std_dev1;
-  float skewnewss1;
-  float mean2;
-  float std_dev2;
-  float skewnewss2;
+  OCVLVF lvf1;
+  OCVLVF lvf2;
 };
 
 enum OCVType {
@@ -116,9 +125,10 @@ enum OCVType {
 
 using OCVTiming = std::variant<float, OCVLVF, OCVLVF2>;
 
-OCVTiming sum_timing(OCVTiming, OCVTiming);
-OCVTiming max_timing(OCVTiming, OCVTiming);
-OCVTiming min_timing(OCVTiming, OCVTiming);
+OCVTiming sum_timing(const OCVTiming&, const OCVTiming&);
+OCVTiming sub_timing(const OCVTiming&, const OCVTiming&);
+OCVTiming max_timing(const OCVTiming&, const OCVTiming&);
+OCVTiming min_timing(const OCVTiming&, const OCVTiming&);
 
 // Struct: Timing
 struct Timing {

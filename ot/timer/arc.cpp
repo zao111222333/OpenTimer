@@ -102,7 +102,7 @@ void Arc::_fprop_slew() {
     [this] (TimingView tv) {
       FOR_EACH_EL_RF_RF_IF(el, frf, trf, (tv[el] && _from._slew[el][frf])) {
         auto lc = (_to._net) ? _to._net->_load(el, trf) : 0.0f;
-        if(auto so = tv[el]->slew(frf, trf, *_from._slew[el][frf], lc); so) {
+        if(auto so = tv[el]->slew(frf, trf, *_from._slew[el][frf], lc, _ocv_type); so) {
           _to._relax_slew(this, el, frf, el, trf, *so);
         }
       }
@@ -163,7 +163,7 @@ void Arc::_bprop_rat() {
     // Case 1: Net arc
     [this] (Net* net) {
       FOR_EACH_EL_RF_IF(el, rf, _to._rat[el][rf] && _delay[el][rf][rf]) {
-        _from._relax_rat(this, el, rf, el, rf, *_to._rat[el][rf] - *_delay[el][rf][rf]);
+        _from._relax_rat(this, el, rf, el, rf, sub_timing(*_to._rat[el][rf], *_delay[el][rf][rf]));
       }
     },
     // Case 2: Cell arc
@@ -176,7 +176,7 @@ void Arc::_bprop_rat() {
           if(!_to._rat[el][trf] || !_delay[el][frf][trf]) {
             continue;
           }
-          _from._relax_rat(this, el, frf, el, trf, *_to._rat[el][trf] - *_delay[el][frf][trf]);
+          _from._relax_rat(this, el, frf, el, trf, sub_timing(*_to._rat[el][trf], *_delay[el][frf][trf]));
         }
         // constraint arc
         else {
@@ -189,14 +189,14 @@ void Arc::_bprop_rat() {
             auto at = _from._at[MAX][frf];
             auto slack = _to.slack(MIN, trf);
             if(at && slack) {
-              _from._relax_rat(this, MAX, frf, MIN, trf, *at + *slack);
+              _from._relax_rat(this, MAX, frf, MIN, trf, sum_timing(*at, *slack));
             }
           }
           else {
             auto at = _from._at[MIN][frf];
             auto slack = _to.slack(MAX, trf);
             if(at && slack) {
-              _from._relax_rat(this, MIN, frf, MAX, trf, *at - *slack);
+              _from._relax_rat(this, MIN, frf, MAX, trf, sub_timing(*at, *slack));
             }
           }
         }

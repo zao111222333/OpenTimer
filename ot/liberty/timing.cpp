@@ -1,4 +1,5 @@
 #include <ot/liberty/timing.hpp>
+#include <cmath>
 
 namespace ot {
 
@@ -408,6 +409,167 @@ void Timing::scale_capacitance(float s) {
   internal_power.scale_capacitance(s);
 }
 
+OCVLVF OCVLVF::sum(const OCVLVF &other) {
+  return OCVLVF {
+    this->m1 + other.m1,
+    this->m2 + other.m2,
+    this->m3 + other.m3
+  };
+}
+
+OCVLVF OCVLVF::sub(const OCVLVF &other) {
+  return OCVLVF {
+    this->m1 - other.m1,
+    this->m2 + other.m2,
+    this->m3 - other.m3
+  };
+}
+
+
+// 计算标准正态分布的累积分布函数 (CDF)
+static float norm_cdf(float x) {
+  return 0.5f * (1.0f + std::erf(x / std::sqrt(2.0f)));
+}
+
+// 计算标准正态分布的概率密度函数 (PDF)
+static float norm_pdf(float x) {
+  return (1.0f / std::sqrt(2.0f * static_cast<float>(M_PI))) * std::exp(-0.5f * x * x);
+}
+
+OCVLVF OCVLVF::max(const OCVLVF &other, float rho) {
+  // 计算 sigma1sigma2
+  float sigma1sigma2 = rho * std::sqrt(this->m2 * other.m2);
+
+  // 计算 theta
+  float theta_squared = this->m2 + other.m2 - 2.0f * sigma1sigma2;
+  if (theta_squared < 0.0f) {
+    throw std::domain_error("Theta squared is negative, invalid parameters.");
+  }
+  float theta = std::sqrt(theta_squared);
+
+  // 计算 alpha
+  if (theta == 0.0f) {
+    throw std::domain_error("Theta is zero, division by zero.");
+  }
+  float alpha = (this->m1 - other.m1) / theta;
+
+  // 计算 Phi_alpha 和 phi_alpha
+  float PHI_alpha = norm_cdf(alpha);
+  float phi_alpha = norm_pdf(alpha);
+
+  // 计算 m1
+  float m1 = this->m1 * PHI_alpha + other.m1 * (1.0f - PHI_alpha) + theta * phi_alpha;
+
+  // 计算 m2
+  float m2 = (this->m2 + this->m1 * this->m1) * PHI_alpha +
+              (other.m2 + other.m1 * other.m1) * (1.0f - PHI_alpha) +
+              (this->m1 + other.m1) * theta * phi_alpha -
+              m1 * m1;
+
+  // 计算 m3
+  float term1 = (std::pow(this->m1, 3) + 3.0f * this->m1 * this->m2) * PHI_alpha;
+  float term2 = (std::pow(other.m1, 3) + 3.0f * other.m1 * other.m2) * (1.0f - PHI_alpha);
+  float term3_part1 = (std::pow(this->m1, 2) + this->m1 * other.m1 + std::pow(other.m1, 2)) * theta;
+  float term3_part2_numerator = 2.0f * std::pow(this->m2, 2) +
+                                  this->m2 * other.m2 +
+                                  2.0f * std::pow(other.m2, 2) -
+                                  sigma1sigma2 * (2.0f * std::sqrt(this->m2) +
+                                                  2.0f * std::sqrt(other.m2) +
+                                                  sigma1sigma2);
+  float term3_part2 = term3_part2_numerator / theta;
+  float term3 = phi_alpha * (term3_part1 + term3_part2);
+  float m3 = term1 + term2 + term3 - (std::pow(m1, 3) + 3.0f * m1 * m2);
+
+  // 返回新的 OCVLVF 对象
+  return OCVLVF{ m1, m2, m3 };
+}
+
+OCVTiming sum_timing(const OCVTiming& lhs, const OCVTiming& rhs) {
+  return std::visit([](const auto& x, const auto& y) -> OCVTiming {
+    using T1 = std::decay_t<decltype(x)>;
+    using T2 = std::decay_t<decltype(y)>;
+
+    if constexpr (std::is_same_v<T1, float> && std::is_same_v<T2, float>) {
+      return x + y;
+    }
+    else if constexpr (std::is_same_v<T1, float> && std::is_same_v<T2, OCVLVF>) {
+      return OCVLVF{ x + y.m1, y.m2, y.m3 };
+    }
+    else if constexpr (std::is_same_v<T1, OCVLVF> && std::is_same_v<T2, float>) {
+      return OCVLVF{ x.m1 + y, x.m2, x.m3 };
+    }
+    else if constexpr (std::is_same_v<T1, OCVLVF> && std::is_same_v<T2, OCVLVF>) {
+      return x.sum(y);
+    }
+    else {
+      throw std::invalid_argument("TODO: sum_timing LVF2 type");
+    }
+  }, lhs, rhs);
+}
+
+OCVTiming sub_timing(const OCVTiming& lhs, const OCVTiming& rhs) {
+  return std::visit([](const auto& x, const auto& y) -> OCVTiming {
+    using T1 = std::decay_t<decltype(x)>;
+    using T2 = std::decay_t<decltype(y)>;
+
+    if constexpr (std::is_same_v<T1, float> && std::is_same_v<T2, float>) {
+      return x - y;
+    }
+    else if constexpr (std::is_same_v<T1, float> && std::is_same_v<T2, OCVLVF>) {
+      return OCVLVF{ x - y.m1, y.m2, - y.m3 };
+    }
+    else if constexpr (std::is_same_v<T1, OCVLVF> && std::is_same_v<T2, float>) {
+      return OCVLVF{ x.m1 - y, x.m2, x.m3 };
+    }
+    else if constexpr (std::is_same_v<T1, OCVLVF> && std::is_same_v<T2, OCVLVF>) {
+      return x.sub(y);
+    }
+    else {
+      throw std::invalid_argument("TODO: sub_timing LVF2 type");
+    }
+  }, lhs, rhs);
+}
+
+OCVTiming max_timing(const OCVTiming& lhs, const OCVTiming& rhs) {
+  return std::visit([](const auto& x, const auto& y) -> OCVTiming {
+    using T1 = std::decay_t<decltype(x)>;
+    using T2 = std::decay_t<decltype(y)>;
+
+    if constexpr (std::is_same_v<T1, float> && std::is_same_v<T2, float>) {
+      if (x > y) {
+        return x;
+      }else{
+        return y;
+      }
+    }
+    else if constexpr (std::is_same_v<T1, float> && std::is_same_v<T2, OCVLVF>) {
+      throw std::invalid_argument("TODO: max_timing float-LVF type");
+    }
+    else if constexpr (std::is_same_v<T1, OCVLVF> && std::is_same_v<T2, float>) {
+      throw std::invalid_argument("TODO: max_timing float-LVF type");
+    }
+    else if constexpr (std::is_same_v<T1, OCVLVF> && std::is_same_v<T2, OCVLVF>) {
+      return x.max(y, 0.0f);
+    }
+    else {
+      throw std::invalid_argument("TODO: max_timing LVF2 type");
+    }
+  }, lhs, rhs);
+}
+
+OCVTiming min_timing(const OCVTiming& lhs, const OCVTiming& rhs) {
+  throw std::invalid_argument("TODO: min_timing LVF2 type");
+}
+
+float pow2(float base)
+{
+  return base*base;
+}
+float pow3(float base)
+{
+  return base*base*base;
+}
+
 // Function: delay
 // Query the delay which is referenced by the output transition status, input slew, and driving 
 // load. The output transition status indicates the type of lut that should be used during the
@@ -511,8 +673,8 @@ std::optional<OCVTiming> Timing::delay(Tran irf, Tran orf, float slew, float loa
     case LVF:
       struct OCVLVF lvf = {
         (*lut1)(val1, val2)+(*lut2)(val1, val2),
-        (*lut3)(val1, val2),
-        (*lut4)(val1, val2)
+        pow2((*lut3)(val1, val2)),
+        pow3((*lut4)(val1, val2))
       };
       return lvf;
     break;
@@ -631,8 +793,8 @@ std::optional<OCVTiming> Timing::slew(Tran irf, Tran orf, float slew, float load
     case LVF:
       struct OCVLVF lvf = {
         (*lut1)(val1, val2)+(*lut2)(val1, val2),
-        (*lut3)(val1, val2),
-        (*lut4)(val1, val2)
+        pow2((*lut3)(val1, val2)),
+        pow3((*lut4)(val1, val2))
       };
       return lvf;
     break;
@@ -752,8 +914,8 @@ std::optional<OCVTiming> Timing::constraint(
     case LVF:
       struct OCVLVF lvf = {
         (*lut1)(val1, val2)+(*lut2)(val1, val2),
-        (*lut3)(val1, val2),
-        (*lut4)(val1, val2)
+        pow2((*lut3)(val1, val2)),
+        pow3((*lut4)(val1, val2))
       };
       return lvf;
     break;
