@@ -177,7 +177,7 @@ class Net {
 
     float _load(Split, Tran) const;
 
-    std::optional<float> _slew(Split, Tran, float, Pin&) const;
+    std::optional<float> _slew(Split, Tran, OCVTiming, Pin&) const;
     std::optional<float> _delay(Split, Tran, Pin&) const;
     
     void _update_rc_timing();

@@ -574,7 +574,7 @@ float pow3(float base)
 // Query the delay which is referenced by the output transition status, input slew, and driving 
 // load. The output transition status indicates the type of lut that should be used during the
 // linear interpolation or linear extrapolation.
-std::optional<OCVTiming> Timing::delay(Tran irf, Tran orf, float slew, float load, OCVType ocv_type) const {
+std::optional<OCVTiming> Timing::delay(Tran irf, Tran orf, OCVTiming slew, float load, OCVType ocv_type) const {
 
   if(!is_transition_defined(irf, orf)) {
     return std::nullopt;
@@ -691,7 +691,7 @@ std::optional<OCVTiming> Timing::delay(Tran irf, Tran orf, float slew, float loa
 // Query the slew which is referenced by the output transition status, input slew, and driving 
 // load. The output transition status indicates the type of lut that should be used during the
 // linear interpolation or linear extrapolation.
-std::optional<OCVTiming> Timing::slew(Tran irf, Tran orf, float slew, float load, OCVType ocv_type) const {
+std::optional<OCVTiming> Timing::slew(Tran irf, Tran orf, OCVTiming slew, float load, OCVType ocv_type) const {
 
   if(!is_transition_defined(irf, orf)) {
     return std::nullopt;

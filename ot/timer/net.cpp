@@ -407,7 +407,7 @@ float Net::_load(Split m, Tran t) const {
 
 // Function: _slew
 // Query the slew at the give pin through this net
-std::optional<float> Net::_slew(Split m, Tran t, float si, Pin& to) const {
+std::optional<float> Net::_slew(Split m, Tran t, OCVTiming si, Pin& to) const {
 
   assert(_rc_timing_updated && to._net == this);
 

@@ -179,8 +179,8 @@ struct Timing {
   void scale_time(float);
   void scale_capacitance(float);
 
-  std::optional<OCVTiming> delay(Tran, Tran, float, float, OCVType) const;
-  std::optional<OCVTiming> slew(Tran, Tran, float, float, OCVType) const;
+  std::optional<OCVTiming> delay(Tran, Tran, OCVTiming, float, OCVType) const;
+  std::optional<OCVTiming> slew(Tran, Tran, OCVTiming, float, OCVType) const;
   std::optional<OCVTiming> constraint(Tran, Tran, float, float, OCVType) const;
 };
 
